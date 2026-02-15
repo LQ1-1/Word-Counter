@@ -14,6 +14,17 @@
       --input-bg: #2d2d2d;
       --border-color: #333;
       --danger: #ff5252;
+
+      /* 题目侧栏专用 */
+      --sidebar-width: 280px;
+
+      /* ✅ 默认题目颜色：浅蓝色（可被用户自定义覆盖） */
+      --title-color: #8be9fd;
+      --sidebar-placeholder: rgba(139, 233, 253, 0.6);
+
+      /* 右键菜单 */
+      --menu-bg: #1b1b1b;
+      --menu-border: #2b2b2b;
     }
 
     body {
@@ -30,7 +41,7 @@
     .container {
       background-color: var(--container-bg);
       width: 90%;
-      max-width: 700px;
+      max-width: 900px;
       padding: 2rem;
       border-radius: 12px;
       box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
@@ -77,12 +88,125 @@
       text-align: center;
     }
 
-    .timer button {
-      padding: 6px 10px;
-      border-radius: 8px;
+    /* ===== 主编辑区域：侧栏 + 正文 ===== */
+    .editor-shell {
+      position: relative;
+      display: flex;
+      gap: 0;
+      min-height: 250px;
     }
 
-    textarea {
+    /* 左侧题目侧栏（可伸缩） */
+    .sidebar {
+      width: var(--sidebar-width);
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      overflow: hidden;
+
+      max-width: var(--sidebar-width);
+      opacity: 1;
+      transform: translateX(0);
+      transition: max-width 220ms ease, opacity 180ms ease, transform 220ms ease;
+    }
+
+    .sidebar.collapsed {
+      max-width: 0;
+      opacity: 0;
+      transform: translateX(-12px);
+      border-width: 0;
+    }
+
+    .sidebar-inner {
+      width: var(--sidebar-width);
+      padding: 12px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      height: 100%;
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .sidebar-title {
+      color: var(--secondary-text);
+      font-size: 0.9rem;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    /* ✅ 题目颜色选择器（小巧、深色风） */
+    .color-picker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .color-picker-label {
+      color: var(--secondary-text);
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+
+    .color-picker input[type="color"] {
+      width: 34px;
+      height: 26px;
+      padding: 0;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    /* 标题输入（contenteditable）外观模拟 textarea */
+    .title-editor {
+      height: 250px;
+      min-height: 250px;
+      background: transparent;
+      color: var(--title-color); /* ✅ 使用可变的题目颜色 */
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 1.02rem;
+      outline: none;
+      box-sizing: border-box;
+
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .title-editor:focus {
+      border-color: var(--title-color);
+      box-shadow: 0 0 0 3px rgba(139, 233, 253, 0.12);
+    }
+
+    /* placeholder（contenteditable） */
+    .title-editor[data-placeholder]:empty:before {
+      content: attr(data-placeholder);
+      color: var(--sidebar-placeholder);
+    }
+
+    /* 正文区域（占满剩余空间） */
+    .main-editor {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-left: 0;
+    }
+
+    textarea#textInput {
       width: 100%;
       height: 250px;
       background-color: var(--input-bg);
@@ -97,8 +221,44 @@
       transition: border-color 0.3s ease;
     }
 
-    textarea:focus {
+    textarea#textInput:focus {
       border-color: var(--accent-color);
+    }
+
+    /* 侧栏开关按钮（像“拉手”） */
+    .sidebar-toggle {
+      align-self: flex-start;
+      background-color: transparent;
+      color: var(--secondary-text);
+      border: 1px solid var(--border-color);
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      user-select: none;
+    }
+
+    .sidebar-toggle:hover {
+      color: var(--accent-color);
+      border-color: var(--accent-color);
+    }
+
+    .chev {
+      display: inline-block;
+      width: 0;
+      height: 0;
+      border-top: 6px solid transparent;
+      border-bottom: 6px solid transparent;
+      border-left: 7px solid currentColor;
+      transform: translateY(1px);
+      transition: transform 220ms ease;
+    }
+
+    .chev.open {
+      transform: rotate(180deg) translateY(-1px);
     }
 
     .stats-container {
@@ -153,10 +313,63 @@
       border-color: var(--danger);
     }
 
-    /* 导出按钮强调一点点 */
     .export-btn:hover {
       color: var(--accent-color);
       border-color: var(--accent-color);
+    }
+
+    /* 右键菜单（自定义） */
+    .context-menu {
+      position: fixed;
+      z-index: 9999;
+      display: none;
+      min-width: 160px;
+      background: var(--menu-bg);
+      border: 1px solid var(--menu-border);
+      border-radius: 10px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+      padding: 6px;
+      user-select: none;
+    }
+
+    .context-menu button {
+      width: 100%;
+      text-align: left;
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 10px;
+      color: var(--text-color);
+      background: transparent;
+      cursor: pointer;
+      transition: background 120ms ease, color 120ms ease;
+    }
+
+    .context-menu button:hover {
+      background: rgba(187, 134, 252, 0.12);
+      color: var(--accent-color);
+    }
+
+    .context-menu .hint {
+      padding: 8px 10px;
+      font-size: 12px;
+      color: var(--secondary-text);
+    }
+
+    /* 窄屏：侧栏覆盖式 */
+    @media (max-width: 768px) {
+      .sidebar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 10;
+        border-radius: 10px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.35);
+      }
+
+      .sidebar.collapsed {
+        transform: translateX(-16px);
+      }
     }
   </style>
 </head>
@@ -166,7 +379,6 @@
     <header>
       <h1>Word Counter</h1>
 
-      <!-- 右上角计时器 -->
       <div class="timer">
         <div id="timerDisplay" class="timer-display">00:00</div>
         <button id="timerToggleBtn" type="button">开始</button>
@@ -174,7 +386,38 @@
       </div>
     </header>
 
-    <textarea id="textInput" placeholder="请在此粘贴或输入文本..."></textarea>
+    <div class="editor-shell">
+      <aside id="sidebar" class="sidebar collapsed" aria-hidden="true">
+        <div class="sidebar-inner">
+          <div class="sidebar-header">
+            <div class="sidebar-title">题目 (Title)</div>
+
+            <!-- ✅ 题目颜色自定义 -->
+            <div class="color-picker">
+              <span class="color-picker-label">颜色</span>
+              <input id="titleColorPicker" type="color" value="#8be9fd" title="选择题目颜色" />
+            </div>
+          </div>
+
+          <div
+            id="titleInput"
+            class="title-editor"
+            contenteditable="true"
+            spellcheck="false"
+            data-placeholder="在此粘贴或输入题目..."
+          ></div>
+        </div>
+      </aside>
+
+      <div class="main-editor">
+        <button id="sidebarToggleBtn" class="sidebar-toggle" type="button" aria-expanded="false">
+          <span id="chev" class="chev"></span>
+          <span id="toggleText">打开题目栏</span>
+        </button>
+
+        <textarea id="textInput" placeholder="请在此粘贴或输入文本..."></textarea>
+      </div>
+    </div>
 
     <div class="stats-container">
       <div class="stat-box">
@@ -191,11 +434,15 @@
       </div>
     </div>
 
-    <!-- 底部：左清空，右导出 -->
     <div class="footer-controls">
       <button type="button" onclick="clearText()">清空文本</button>
       <button id="exportMdBtn" class="export-btn" type="button">导出为 .md</button>
     </div>
+  </div>
+
+  <div id="contextMenu" class="context-menu" role="menu" aria-hidden="true">
+    <button id="underlineBtn" type="button">下划线</button>
+    <div class="hint">提示：先选中文字，再右键</div>
   </div>
 
   <script>
@@ -210,21 +457,13 @@
     function updateStats() {
       const text = textInput.value;
 
-      // 1) 字符数（含空格）
       charCountDisplay.textContent = text.length;
 
-      // 2) 字符数（不含空格）
       const textWithoutSpaces = text.replace(/\s/g, '');
       charCountNoSpaceDisplay.textContent = textWithoutSpaces.length;
 
-      // 3) 单词数
       const trimmedText = text.trim();
-      if (trimmedText === '') {
-        wordCountDisplay.textContent = 0;
-      } else {
-        const words = trimmedText.split(/\s+/);
-        wordCountDisplay.textContent = words.length;
-      }
+      wordCountDisplay.textContent = trimmedText ? trimmedText.split(/\s+/).length : 0;
     }
 
     function clearText() {
@@ -245,9 +484,7 @@
     function formatTime(totalSeconds) {
       const m = Math.floor(totalSeconds / 60);
       const s = totalSeconds % 60;
-      const mm = String(m).padStart(2, '0');
-      const ss = String(s).padStart(2, '0');
-      return `${mm}:${ss}`;
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     }
 
     function renderTimer() {
@@ -280,24 +517,175 @@
     timerToggleBtn.addEventListener('click', () => {
       timerRunning ? pauseTimer() : startTimer();
     });
-
     timerResetBtn.addEventListener('click', resetTimer);
-
-    // 初始化显示
     renderTimer();
 
-    // ====== 导出 Markdown ======
+    // ====== 左侧题目栏：打开/收回 ======
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+    const toggleText = document.getElementById('toggleText');
+    const chev = document.getElementById('chev');
+    const titleInput = document.getElementById('titleInput');
+
+    let sidebarOpen = false;
+
+    function renderSidebar() {
+      sidebarOpen ? sidebar.classList.remove('collapsed') : sidebar.classList.add('collapsed');
+      sidebar.setAttribute('aria-hidden', String(!sidebarOpen));
+      sidebarToggleBtn.setAttribute('aria-expanded', String(sidebarOpen));
+      toggleText.textContent = sidebarOpen ? '收回题目栏' : '打开题目栏';
+      sidebarOpen ? chev.classList.add('open') : chev.classList.remove('open');
+
+      if (sidebarOpen) setTimeout(() => titleInput.focus(), 50);
+      else setTimeout(() => textInput.focus(), 50);
+    }
+
+    sidebarToggleBtn.addEventListener('click', () => {
+      sidebarOpen = !sidebarOpen;
+      renderSidebar();
+    });
+
+    renderSidebar();
+
+    // ====== ✅ 题目颜色自定义逻辑（默认浅蓝色） ======
+    const titleColorPicker = document.getElementById('titleColorPicker');
+
+    function setTitleColor(hex) {
+      document.documentElement.style.setProperty('--title-color', hex);
+      // placeholder 也跟着更协调（用同色但透明）
+      try {
+        const rgb = hexToRgb(hex);
+        if (rgb) {
+          document.documentElement.style.setProperty('--sidebar-placeholder', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`);
+        }
+      } catch (_) {}
+    }
+
+    function hexToRgb(hex) {
+      const h = (hex || '').replace('#', '').trim();
+      if (h.length === 3) {
+        const r = parseInt(h[0] + h[0], 16);
+        const g = parseInt(h[1] + h[1], 16);
+        const b = parseInt(h[2] + h[2], 16);
+        return { r, g, b };
+      }
+      if (h.length === 6) {
+        const r = parseInt(h.slice(0, 2), 16);
+        const g = parseInt(h.slice(2, 4), 16);
+        const b = parseInt(h.slice(4, 6), 16);
+        return { r, g, b };
+      }
+      return null;
+    }
+
+    // 载入：优先用 localStorage 的上次选择
+    const savedTitleColor = localStorage.getItem('titleColor');
+    if (savedTitleColor) {
+      titleColorPicker.value = savedTitleColor;
+      setTitleColor(savedTitleColor);
+    } else {
+      setTitleColor(titleColorPicker.value); // 默认浅蓝
+    }
+
+    // 改色：实时生效 + 持久化
+    titleColorPicker.addEventListener('input', (e) => {
+      const hex = e.target.value;
+      setTitleColor(hex);
+      localStorage.setItem('titleColor', hex);
+    });
+
+    // ====== 标题：右键“下划线” ======
+    const contextMenu = document.getElementById('contextMenu');
+    const underlineBtn = document.getElementById('underlineBtn');
+    let savedRange = null;
+
+    function hideMenu() {
+      contextMenu.style.display = 'none';
+      contextMenu.setAttribute('aria-hidden', 'true');
+    }
+
+    function showMenu(x, y) {
+      contextMenu.style.display = 'block';
+      contextMenu.setAttribute('aria-hidden', 'false');
+
+      const menuRect = contextMenu.getBoundingClientRect();
+      const pad = 8;
+      const maxX = window.innerWidth - menuRect.width - pad;
+      const maxY = window.innerHeight - menuRect.height - pad;
+
+      contextMenu.style.left = Math.max(pad, Math.min(x, maxX)) + 'px';
+      contextMenu.style.top = Math.max(pad, Math.min(y, maxY)) + 'px';
+    }
+
+    function selectionIsInsideTitle() {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return false;
+      const range = sel.getRangeAt(0);
+      const common = range.commonAncestorContainer;
+      return titleInput.contains(common.nodeType === 1 ? common : common.parentNode);
+    }
+
+    titleInput.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return hideMenu();
+      if (!selectionIsInsideTitle()) return hideMenu();
+
+      const range = sel.getRangeAt(0);
+      if (range.collapsed) return hideMenu();
+
+      savedRange = range.cloneRange();
+      showMenu(e.clientX, e.clientY);
+    });
+
+    underlineBtn.addEventListener('click', () => {
+      if (!savedRange) return;
+
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(savedRange);
+
+      document.execCommand('underline');
+
+      savedRange = null;
+      hideMenu();
+      titleInput.focus();
+    });
+
+    document.addEventListener('mousedown', (e) => {
+      if (contextMenu.style.display === 'block' && !contextMenu.contains(e.target)) hideMenu();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') hideMenu();
+    });
+
+    window.addEventListener('scroll', hideMenu, true);
+    window.addEventListener('resize', hideMenu);
+
+    // ====== 导出 Markdown：带题目（若存在） ======
     const exportMdBtn = document.getElementById('exportMdBtn');
 
+    function getTitlePlainText() {
+      return (titleInput.innerText || '').replace(/\u00A0/g, ' ').trim();
+    }
+
     function exportToMarkdown() {
-      const content = textInput.value || '';
-      // 可选：加个简单的头部
-      const md = content;
+      const title = getTitlePlainText();
+      const content = (textInput.value || '').trimEnd();
+
+      let md = '';
+
+      if (title) {
+        md += `<div align="center">\n\n# ${title}\n\n</div>\n\n---\n\n`;
+      }
+
+      md += content;
 
       const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
       const url = URL.createObjectURL(blob);
 
-      // 文件名：word-counter-YYYYMMDD-HHMMSS.md
       const now = new Date();
       const pad = (n) => String(n).padStart(2, '0');
       const filename =
