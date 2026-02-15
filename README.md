@@ -1,2 +1,2 @@
 # Word-Counter
-Count your words amount and export as a md file with time counting
+Count the words amount and export it to a md file with timing information
