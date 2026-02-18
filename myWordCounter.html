@@ -452,7 +452,36 @@
     const charCountDisplay = document.getElementById('charCount');
     const charCountNoSpaceDisplay = document.getElementById('charCountNoSpace');
 
-    textInput.addEventListener('input', updateStats);
+    const DRAFT_STORAGE_KEY = 'wordCounterDraftV1';
+
+    function saveDraft() {
+      try {
+        const payload = {
+          text: textInput.value || '',
+          titleHtml: titleInput.innerHTML || '',
+        };
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload));
+      } catch (_) {}
+    }
+
+    function loadDraft() {
+      try {
+        const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (!raw) return;
+        const payload = JSON.parse(raw);
+        if (payload && typeof payload.text === 'string') {
+          textInput.value = payload.text;
+        }
+        if (payload && typeof payload.titleHtml === 'string') {
+          titleInput.innerHTML = payload.titleHtml;
+        }
+      } catch (_) {}
+    }
+
+    textInput.addEventListener('input', () => {
+      updateStats();
+      saveDraft();
+    });
 
     function updateStats() {
       const text = textInput.value;
@@ -469,6 +498,14 @@
     function clearText() {
       textInput.value = '';
       updateStats();
+      try {
+        const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (raw) {
+          const payload = JSON.parse(raw);
+          payload.text = '';
+          localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload));
+        }
+      } catch (_) {}
       textInput.focus();
     }
 
@@ -547,6 +584,8 @@
 
     renderSidebar();
 
+    titleInput.addEventListener('input', saveDraft);
+
     // ====== ✅ 题目颜色自定义逻辑（默认浅蓝色） ======
     const titleColorPicker = document.getElementById('titleColorPicker');
 
@@ -586,6 +625,9 @@
     } else {
       setTitleColor(titleColorPicker.value); // 默认浅蓝
     }
+
+    loadDraft();
+    updateStats();
 
     // 改色：实时生效 + 持久化
     titleColorPicker.addEventListener('input', (e) => {
