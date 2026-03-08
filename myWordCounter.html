@@ -4,382 +4,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>深色极简单词计数器</title>
-  <style>
-    :root {
-      --bg-color: #121212;
-      --container-bg: #1e1e1e;
-      --text-color: #e0e0e0;
-      --accent-color: #bb86fc;
-      --secondary-text: #a0a0a0;
-      --input-bg: #2d2d2d;
-      --border-color: #333;
-      --danger: #ff5252;
+  <link rel="stylesheet" href="CSS/myWordCounter.css" />
 
-      /* 题目侧栏专用 */
-      --sidebar-width: 280px;
-
-      /* ✅ 默认题目颜色：浅蓝色（可被用户自定义覆盖） */
-      --title-color: #8be9fd;
-      --sidebar-placeholder: rgba(139, 233, 253, 0.6);
-
-      /* 右键菜单 */
-      --menu-bg: #1b1b1b;
-      --menu-border: #2b2b2b;
-    }
-
-    body {
-      background-color: var(--bg-color);
-      color: var(--text-color);
-      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
-    }
-
-    .container {
-      background-color: var(--container-bg);
-      width: 90%;
-      max-width: 900px;
-      padding: 2rem;
-      border-radius: 12px;
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid var(--border-color);
-      padding-bottom: 1rem;
-      gap: 1rem;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: 1.5rem;
-      color: var(--accent-color);
-      white-space: nowrap;
-    }
-
-    /* 计时器区域 */
-    .timer {
-      margin-left: auto;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .timer-display {
-      font-variant-numeric: tabular-nums;
-      font-size: 1rem;
-      color: var(--text-color);
-      background: var(--input-bg);
-      border: 1px solid var(--border-color);
-      padding: 6px 10px;
-      border-radius: 8px;
-      min-width: 90px;
-      text-align: center;
-    }
-
-    /* ===== 主编辑区域：侧栏 + 正文 ===== */
-    .editor-shell {
-      position: relative;
-      display: flex;
-      gap: 0;
-      min-height: 250px;
-    }
-
-    /* 左侧题目侧栏（可伸缩） */
-    .sidebar {
-      width: var(--sidebar-width);
-      background: var(--input-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-      overflow: hidden;
-
-      max-width: var(--sidebar-width);
-      opacity: 1;
-      transform: translateX(0);
-      transition: max-width 220ms ease, opacity 180ms ease, transform 220ms ease;
-    }
-
-    .sidebar.collapsed {
-      max-width: 0;
-      opacity: 0;
-      transform: translateX(-12px);
-      border-width: 0;
-    }
-
-    .sidebar-inner {
-      width: var(--sidebar-width);
-      padding: 12px;
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      height: 100%;
-    }
-
-    .sidebar-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .sidebar-title {
-      color: var(--secondary-text);
-      font-size: 0.9rem;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      user-select: none;
-      white-space: nowrap;
-    }
-
-    /* ✅ 题目颜色选择器（小巧、深色风） */
-    .color-picker {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin-left: auto;
-    }
-
-    .color-picker-label {
-      color: var(--secondary-text);
-      font-size: 0.85rem;
-      white-space: nowrap;
-    }
-
-    .color-picker input[type="color"] {
-      width: 34px;
-      height: 26px;
-      padding: 0;
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      background: transparent;
-      cursor: pointer;
-    }
-
-    /* 标题输入（contenteditable）外观模拟 textarea */
-    .title-editor {
-      height: 250px;
-      min-height: 250px;
-      background: transparent;
-      color: var(--title-color); /* ✅ 使用可变的题目颜色 */
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 10px;
-      font-size: 1.02rem;
-      outline: none;
-      box-sizing: border-box;
-
-      overflow: auto;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-
-    .title-editor:focus {
-      border-color: var(--title-color);
-      box-shadow: 0 0 0 3px rgba(139, 233, 253, 0.12);
-    }
-
-    /* placeholder（contenteditable） */
-    .title-editor[data-placeholder]:empty:before {
-      content: attr(data-placeholder);
-      color: var(--sidebar-placeholder);
-    }
-
-    /* 正文区域（占满剩余空间） */
-    .main-editor {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      margin-left: 0;
-    }
-
-    textarea#textInput {
-      width: 100%;
-      height: 250px;
-      background-color: var(--input-bg);
-      color: var(--text-color);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 1rem;
-      font-size: 1.1rem;
-      resize: vertical;
-      box-sizing: border-box;
-      outline: none;
-      transition: border-color 0.3s ease;
-    }
-
-    textarea#textInput:focus {
-      border-color: var(--accent-color);
-    }
-
-    /* 侧栏开关按钮（像“拉手”） */
-    .sidebar-toggle {
-      align-self: flex-start;
-      background-color: transparent;
-      color: var(--secondary-text);
-      border: 1px solid var(--border-color);
-      padding: 8px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      user-select: none;
-    }
-
-    .sidebar-toggle:hover {
-      color: var(--accent-color);
-      border-color: var(--accent-color);
-    }
-
-    .chev {
-      display: inline-block;
-      width: 0;
-      height: 0;
-      border-top: 6px solid transparent;
-      border-bottom: 6px solid transparent;
-      border-left: 7px solid currentColor;
-      transform: translateY(1px);
-      transition: transform 220ms ease;
-    }
-
-    .chev.open {
-      transform: rotate(180deg) translateY(-1px);
-    }
-
-    .stats-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: 1rem;
-    }
-
-    .stat-box {
-      background-color: var(--input-bg);
-      padding: 1rem;
-      border-radius: 8px;
-      text-align: center;
-      border: 1px solid var(--border-color);
-    }
-
-    .stat-number {
-      display: block;
-      font-size: 2rem;
-      font-weight: bold;
-      color: var(--accent-color);
-      margin-bottom: 0.5rem;
-    }
-
-    .stat-label {
-      color: var(--secondary-text);
-      font-size: 0.9rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .footer-controls {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-
-    button {
-      background-color: transparent;
-      color: var(--secondary-text);
-      border: 1px solid var(--border-color);
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    button:hover {
-      color: var(--danger);
-      border-color: var(--danger);
-    }
-
-    .export-btn:hover {
-      color: var(--accent-color);
-      border-color: var(--accent-color);
-    }
-
-    /* 右键菜单（自定义） */
-    .context-menu {
-      position: fixed;
-      z-index: 9999;
-      display: none;
-      min-width: 160px;
-      background: var(--menu-bg);
-      border: 1px solid var(--menu-border);
-      border-radius: 10px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
-      padding: 6px;
-      user-select: none;
-    }
-
-    .context-menu button {
-      width: 100%;
-      text-align: left;
-      border: 0;
-      border-radius: 8px;
-      padding: 10px 10px;
-      color: var(--text-color);
-      background: transparent;
-      cursor: pointer;
-      transition: background 120ms ease, color 120ms ease;
-    }
-
-    .context-menu button:hover {
-      background: rgba(187, 134, 252, 0.12);
-      color: var(--accent-color);
-    }
-
-    .context-menu .hint {
-      padding: 8px 10px;
-      font-size: 12px;
-      color: var(--secondary-text);
-    }
-
-    /* 窄屏：侧栏覆盖式 */
-    @media (max-width: 768px) {
-      .sidebar {
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        z-index: 10;
-        border-radius: 10px;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.35);
-      }
-
-      .sidebar.collapsed {
-        transform: translateX(-16px);
-      }
-    }
-  </style>
 </head>
 
 <body>
   <div class="container">
     <header>
-      <h1>Word Counter</h1>
+      <h1 id="appTitle">Word Counter</h1>
 
       <div class="timer">
+        <div class="language-picker">
+          <label id="langLabel" class="language-label" for="langSelect">语言</label>
+          <select id="langSelect" class="language-select">
+            <option value="zh">中文</option>
+            <option value="en">English</option>
+            <option value="de">Deutsch</option>
+            <option value="he">עברית</option>
+          </select>
+        </div>
         <div id="timerDisplay" class="timer-display">00:00</div>
         <button id="timerToggleBtn" type="button">开始</button>
         <button id="timerResetBtn" type="button">重置</button>
@@ -390,11 +33,11 @@
       <aside id="sidebar" class="sidebar collapsed" aria-hidden="true">
         <div class="sidebar-inner">
           <div class="sidebar-header">
-            <div class="sidebar-title">题目 (Title)</div>
+            <div id="titleLabel" class="sidebar-title">题目 (Title)</div>
 
             <!-- ✅ 题目颜色自定义 -->
             <div class="color-picker">
-              <span class="color-picker-label">颜色</span>
+              <span id="colorLabel" class="color-picker-label">颜色</span>
               <input id="titleColorPicker" type="color" value="#8be9fd" title="选择题目颜色" />
             </div>
           </div>
@@ -406,6 +49,25 @@
             spellcheck="false"
             data-placeholder="在此粘贴或输入题目..."
           ></div>
+
+          <div class="title-image-tools">
+            <div class="title-image-header">
+              <span id="titleImageLabel" class="title-image-label">题目图片</span>
+              <label class="image-upload-btn">
+                <span id="titleImageUploadText">上传图片</span>
+                <input id="titleImageInput" type="file" accept="image/*" multiple />
+              </label>
+              <button id="clearTitleImagesBtn" type="button">清空图片</button>
+            </div>
+            <div id="titleImageList" class="title-image-list" aria-live="polite"></div>
+          </div>
+
+          <div id="titleImageViewer" class="title-image-viewer" aria-hidden="true">
+            <button id="titleImagePrev" class="viewer-nav prev" type="button" aria-label="上一张">‹</button>
+            <img id="titleImageViewerImg" alt="title image preview" />
+            <button id="titleImageNext" class="viewer-nav next" type="button" aria-label="下一张">›</button>
+            <button id="titleImageClose" class="viewer-close" type="button" aria-label="关闭">×</button>
+          </div>
         </div>
       </aside>
 
@@ -422,328 +84,27 @@
     <div class="stats-container">
       <div class="stat-box">
         <span id="wordCount" class="stat-number">0</span>
-        <span class="stat-label">单词数 (Words)</span>
+        <span id="wordCountLabel" class="stat-label">单词数 (Words)</span>
       </div>
       <div class="stat-box">
         <span id="charCount" class="stat-number">0</span>
-        <span class="stat-label">字符数 (Chars)</span>
+        <span id="charCountLabel" class="stat-label">字符数 (Chars)</span>
       </div>
       <div class="stat-box">
         <span id="charCountNoSpace" class="stat-number">0</span>
-        <span class="stat-label">字符 (不含空格)</span>
+        <span id="charCountNoSpaceLabel" class="stat-label">字符 (不含空格)</span>
       </div>
     </div>
 
     <div class="footer-controls">
-      <button type="button" onclick="clearText()">清空文本</button>
+      <button id="clearTextBtn" type="button" onclick="clearText()">清空文本</button>
       <button id="exportMdBtn" class="export-btn" type="button">导出为 .md</button>
     </div>
   </div>
 
   <div id="contextMenu" class="context-menu" role="menu" aria-hidden="true">
     <button id="underlineBtn" type="button">下划线</button>
-    <div class="hint">提示：先选中文字，再右键</div>
+    <div id="contextHint" class="hint">提示：先选中文字，再右键</div>
   </div>
 
-  <script>
-    // ====== 计数器 ======
-    const textInput = document.getElementById('textInput');
-    const wordCountDisplay = document.getElementById('wordCount');
-    const charCountDisplay = document.getElementById('charCount');
-    const charCountNoSpaceDisplay = document.getElementById('charCountNoSpace');
-
-    const DRAFT_STORAGE_KEY = 'wordCounterDraftV1';
-
-    function saveDraft() {
-      try {
-        const payload = {
-          text: textInput.value || '',
-          titleHtml: titleInput.innerHTML || '',
-        };
-        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload));
-      } catch (_) {}
-    }
-
-    function loadDraft() {
-      try {
-        const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
-        if (!raw) return;
-        const payload = JSON.parse(raw);
-        if (payload && typeof payload.text === 'string') {
-          textInput.value = payload.text;
-        }
-        if (payload && typeof payload.titleHtml === 'string') {
-          titleInput.innerHTML = payload.titleHtml;
-        }
-      } catch (_) {}
-    }
-
-    textInput.addEventListener('input', () => {
-      updateStats();
-      saveDraft();
-    });
-
-    function updateStats() {
-      const text = textInput.value;
-
-      charCountDisplay.textContent = text.length;
-
-      const textWithoutSpaces = text.replace(/\s/g, '');
-      charCountNoSpaceDisplay.textContent = textWithoutSpaces.length;
-
-      const trimmedText = text.trim();
-      wordCountDisplay.textContent = trimmedText ? trimmedText.split(/\s+/).length : 0;
-    }
-
-    function clearText() {
-      textInput.value = '';
-      updateStats();
-      try {
-        const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
-        if (raw) {
-          const payload = JSON.parse(raw);
-          payload.text = '';
-          localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload));
-        }
-      } catch (_) {}
-      textInput.focus();
-    }
-
-    // ====== 计时器 ======
-    const timerDisplay = document.getElementById('timerDisplay');
-    const timerToggleBtn = document.getElementById('timerToggleBtn');
-    const timerResetBtn = document.getElementById('timerResetBtn');
-
-    let timerRunning = false;
-    let elapsedSeconds = 0;
-    let timerId = null;
-
-    function formatTime(totalSeconds) {
-      const m = Math.floor(totalSeconds / 60);
-      const s = totalSeconds % 60;
-      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    }
-
-    function renderTimer() {
-      timerDisplay.textContent = formatTime(elapsedSeconds);
-    }
-
-    function startTimer() {
-      if (timerRunning) return;
-      timerRunning = true;
-      timerToggleBtn.textContent = '暂停';
-      timerId = setInterval(() => {
-        elapsedSeconds += 1;
-        renderTimer();
-      }, 1000);
-    }
-
-    function pauseTimer() {
-      timerRunning = false;
-      timerToggleBtn.textContent = '开始';
-      if (timerId) clearInterval(timerId);
-      timerId = null;
-    }
-
-    function resetTimer() {
-      pauseTimer();
-      elapsedSeconds = 0;
-      renderTimer();
-    }
-
-    timerToggleBtn.addEventListener('click', () => {
-      timerRunning ? pauseTimer() : startTimer();
-    });
-    timerResetBtn.addEventListener('click', resetTimer);
-    renderTimer();
-
-    // ====== 左侧题目栏：打开/收回 ======
-    const sidebar = document.getElementById('sidebar');
-    const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
-    const toggleText = document.getElementById('toggleText');
-    const chev = document.getElementById('chev');
-    const titleInput = document.getElementById('titleInput');
-
-    let sidebarOpen = false;
-
-    function renderSidebar() {
-      sidebarOpen ? sidebar.classList.remove('collapsed') : sidebar.classList.add('collapsed');
-      sidebar.setAttribute('aria-hidden', String(!sidebarOpen));
-      sidebarToggleBtn.setAttribute('aria-expanded', String(sidebarOpen));
-      toggleText.textContent = sidebarOpen ? '收回题目栏' : '打开题目栏';
-      sidebarOpen ? chev.classList.add('open') : chev.classList.remove('open');
-
-      if (sidebarOpen) setTimeout(() => titleInput.focus(), 50);
-      else setTimeout(() => textInput.focus(), 50);
-    }
-
-    sidebarToggleBtn.addEventListener('click', () => {
-      sidebarOpen = !sidebarOpen;
-      renderSidebar();
-    });
-
-    renderSidebar();
-
-    titleInput.addEventListener('input', saveDraft);
-
-    // ====== ✅ 题目颜色自定义逻辑（默认浅蓝色） ======
-    const titleColorPicker = document.getElementById('titleColorPicker');
-
-    function setTitleColor(hex) {
-      document.documentElement.style.setProperty('--title-color', hex);
-      // placeholder 也跟着更协调（用同色但透明）
-      try {
-        const rgb = hexToRgb(hex);
-        if (rgb) {
-          document.documentElement.style.setProperty('--sidebar-placeholder', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`);
-        }
-      } catch (_) {}
-    }
-
-    function hexToRgb(hex) {
-      const h = (hex || '').replace('#', '').trim();
-      if (h.length === 3) {
-        const r = parseInt(h[0] + h[0], 16);
-        const g = parseInt(h[1] + h[1], 16);
-        const b = parseInt(h[2] + h[2], 16);
-        return { r, g, b };
-      }
-      if (h.length === 6) {
-        const r = parseInt(h.slice(0, 2), 16);
-        const g = parseInt(h.slice(2, 4), 16);
-        const b = parseInt(h.slice(4, 6), 16);
-        return { r, g, b };
-      }
-      return null;
-    }
-
-    // 载入：优先用 localStorage 的上次选择
-    const savedTitleColor = localStorage.getItem('titleColor');
-    if (savedTitleColor) {
-      titleColorPicker.value = savedTitleColor;
-      setTitleColor(savedTitleColor);
-    } else {
-      setTitleColor(titleColorPicker.value); // 默认浅蓝
-    }
-
-    loadDraft();
-    updateStats();
-
-    // 改色：实时生效 + 持久化
-    titleColorPicker.addEventListener('input', (e) => {
-      const hex = e.target.value;
-      setTitleColor(hex);
-      localStorage.setItem('titleColor', hex);
-    });
-
-    // ====== 标题：右键“下划线” ======
-    const contextMenu = document.getElementById('contextMenu');
-    const underlineBtn = document.getElementById('underlineBtn');
-    let savedRange = null;
-
-    function hideMenu() {
-      contextMenu.style.display = 'none';
-      contextMenu.setAttribute('aria-hidden', 'true');
-    }
-
-    function showMenu(x, y) {
-      contextMenu.style.display = 'block';
-      contextMenu.setAttribute('aria-hidden', 'false');
-
-      const menuRect = contextMenu.getBoundingClientRect();
-      const pad = 8;
-      const maxX = window.innerWidth - menuRect.width - pad;
-      const maxY = window.innerHeight - menuRect.height - pad;
-
-      contextMenu.style.left = Math.max(pad, Math.min(x, maxX)) + 'px';
-      contextMenu.style.top = Math.max(pad, Math.min(y, maxY)) + 'px';
-    }
-
-    function selectionIsInsideTitle() {
-      const sel = window.getSelection();
-      if (!sel || sel.rangeCount === 0) return false;
-      const range = sel.getRangeAt(0);
-      const common = range.commonAncestorContainer;
-      return titleInput.contains(common.nodeType === 1 ? common : common.parentNode);
-    }
-
-    titleInput.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-
-      const sel = window.getSelection();
-      if (!sel || sel.rangeCount === 0) return hideMenu();
-      if (!selectionIsInsideTitle()) return hideMenu();
-
-      const range = sel.getRangeAt(0);
-      if (range.collapsed) return hideMenu();
-
-      savedRange = range.cloneRange();
-      showMenu(e.clientX, e.clientY);
-    });
-
-    underlineBtn.addEventListener('click', () => {
-      if (!savedRange) return;
-
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(savedRange);
-
-      document.execCommand('underline');
-
-      savedRange = null;
-      hideMenu();
-      titleInput.focus();
-    });
-
-    document.addEventListener('mousedown', (e) => {
-      if (contextMenu.style.display === 'block' && !contextMenu.contains(e.target)) hideMenu();
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') hideMenu();
-    });
-
-    window.addEventListener('scroll', hideMenu, true);
-    window.addEventListener('resize', hideMenu);
-
-    // ====== 导出 Markdown：带题目（若存在） ======
-    const exportMdBtn = document.getElementById('exportMdBtn');
-
-    function getTitlePlainText() {
-      return (titleInput.innerText || '').replace(/\u00A0/g, ' ').trim();
-    }
-
-    function exportToMarkdown() {
-      const title = getTitlePlainText();
-      const content = (textInput.value || '').trimEnd();
-
-      let md = '';
-
-      if (title) {
-        md += `<div align="center">\n\n# ${title}\n\n</div>\n\n---\n\n`;
-      }
-
-      md += content;
-
-      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-
-      const now = new Date();
-      const pad = (n) => String(n).padStart(2, '0');
-      const filename =
-        `word-counter-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-` +
-        `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.md`;
-
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    }
-
-    exportMdBtn.addEventListener('click', exportToMarkdown);
-  </script>
-</body>
-</html>
+  <script src="Script/myWordCounter.js"></script>
