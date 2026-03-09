@@ -558,12 +558,42 @@
 
       let md = '';
 
-      if (titleImages.length > 0 || title) {
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const timestamp =
+        `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-` +
+        `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
+      const sanitizeName = (name) =>
+        (name || '')
+          .replace(/\.[^/.]+$/, '')
+          .replace(/[^a-zA-Z0-9_-]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '') || 'image';
+
+      const getExt = (dataUrl, fallback = 'png') => {
+        const match = String(dataUrl || '').match(/^data:image\/([a-zA-Z0-9.+-]+);/);
+        if (!match) return fallback;
+        const ext = match[1].toLowerCase().replace('jpeg', 'jpg');
+        return ext;
+      };
+
+      let assetFiles = [];
+      if (titleImages.length > 0) {
+        assetFiles = titleImages.map((img, idx) => {
+          const ext = getExt(img.dataUrl, 'png');
+          const base = sanitizeName(img.name);
+          const filename = `assets/${base}-${idx + 1}.${ext}`;
+          return { filename, dataUrl: img.dataUrl, alt: img.name || `title-image-${idx + 1}` };
+        });
+      }
+
+      if (assetFiles.length > 0 || title) {
         md += `<div align="center">\n\n`;
-        if (titleImages.length > 0) {
-          titleImages.forEach((img, idx) => {
-            const alt = img.name ? img.name.replace(/"/g, "'") : `title-image-${idx + 1}`;
-            md += `<img src="${img.dataUrl}" alt="${alt}" style="max-width: 100%; height: auto;" />\n\n`;
+        if (assetFiles.length > 0) {
+          assetFiles.forEach((img) => {
+            const alt = img.alt ? img.alt.replace(/"/g, "'") : 'title-image';
+            md += `<img src="${img.filename}" alt="${alt}" style="max-width: 100%; height: auto;" />\n\n`;
           });
         }
         if (title) {
@@ -574,22 +604,134 @@
 
       md += content;
 
-      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
+      if (assetFiles.length === 0) {
+        const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const filename = `word-counter-${timestamp}.md`;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        return;
+      }
 
-      const now = new Date();
-      const pad = (n) => String(n).padStart(2, '0');
-      const filename =
-        `word-counter-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-` +
-        `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.md`;
+      function dataUrlToUint8Array(dataUrl) {
+        const parts = String(dataUrl || '').split(',');
+        if (parts.length < 2) return new Uint8Array();
+        const base64 = parts[1];
+        const binary = atob(base64);
+        const len = binary.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+        return bytes;
+      }
 
+      function crc32(bytes) {
+        let crc = 0xffffffff;
+        for (let i = 0; i < bytes.length; i++) {
+          crc ^= bytes[i];
+          for (let j = 0; j < 8; j++) {
+            const mask = -(crc & 1);
+            crc = (crc >>> 1) ^ (0xedb88320 & mask);
+          }
+        }
+        return (crc ^ 0xffffffff) >>> 0;
+      }
+
+      function buildZip(files) {
+        const encoder = new TextEncoder();
+        const localParts = [];
+        const centralParts = [];
+        let offset = 0;
+
+        files.forEach((file) => {
+          const nameBytes = encoder.encode(file.name);
+          const dataBytes = file.data;
+          const crc = crc32(dataBytes);
+          const size = dataBytes.length;
+
+          const localHeader = new Uint8Array(30 + nameBytes.length);
+          const view = new DataView(localHeader.buffer);
+          view.setUint32(0, 0x04034b50, true);
+          view.setUint16(4, 20, true);
+          view.setUint16(6, 0, true);
+          view.setUint16(8, 0, true);
+          view.setUint16(10, 0, true);
+          view.setUint16(12, 0, true);
+          view.setUint32(14, crc, true);
+          view.setUint32(18, size, true);
+          view.setUint32(22, size, true);
+          view.setUint16(26, nameBytes.length, true);
+          view.setUint16(28, 0, true);
+          localHeader.set(nameBytes, 30);
+
+          localParts.push(localHeader, dataBytes);
+
+          const centralHeader = new Uint8Array(46 + nameBytes.length);
+          const cview = new DataView(centralHeader.buffer);
+          cview.setUint32(0, 0x02014b50, true);
+          cview.setUint16(4, 20, true);
+          cview.setUint16(6, 20, true);
+          cview.setUint16(8, 0, true);
+          cview.setUint16(10, 0, true);
+          cview.setUint16(12, 0, true);
+          cview.setUint16(14, 0, true);
+          cview.setUint32(16, crc, true);
+          cview.setUint32(20, size, true);
+          cview.setUint32(24, size, true);
+          cview.setUint16(28, nameBytes.length, true);
+          cview.setUint16(30, 0, true);
+          cview.setUint16(32, 0, true);
+          cview.setUint16(34, 0, true);
+          cview.setUint16(36, 0, true);
+          cview.setUint32(38, 0, true);
+          cview.setUint32(42, offset, true);
+          centralHeader.set(nameBytes, 46);
+          centralParts.push(centralHeader);
+
+          offset += localHeader.length + size;
+        });
+
+        const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+        const end = new Uint8Array(22);
+        const eview = new DataView(end.buffer);
+        eview.setUint32(0, 0x06054b50, true);
+        eview.setUint16(4, 0, true);
+        eview.setUint16(6, 0, true);
+        eview.setUint16(8, files.length, true);
+        eview.setUint16(10, files.length, true);
+        eview.setUint32(12, centralSize, true);
+        eview.setUint32(16, offset, true);
+        eview.setUint16(20, 0, true);
+
+        return new Blob([...localParts, ...centralParts, end], { type: 'application/zip' });
+      }
+
+      const files = [];
+      files.push({
+        name: `word-counter-${timestamp}.md`,
+        data: new TextEncoder().encode(md),
+      });
+      assetFiles.forEach((img) => {
+        files.push({
+          name: img.filename,
+          data: dataUrlToUint8Array(img.dataUrl),
+        });
+      });
+
+      const zipBlob = buildZip(files);
+      const zipUrl = URL.createObjectURL(zipBlob);
+      const zipName = `word-counter-${timestamp}.zip`;
       const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
+      a.href = zipUrl;
+      a.download = zipName;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(zipUrl);
     }
 
     exportMdBtn.addEventListener('click', exportToMarkdown);
