@@ -112,6 +112,24 @@
     <div id="contextHint" class="hint">提示：先选中文字，再右键</div>
   </div>
 
-  <script src="Script/myWordCounter.js"></script>
+  <div id="renameModal" class="modal-backdrop" aria-hidden="true">
+    <div class="rename-modal" role="dialog" aria-modal="true" aria-labelledby="renameModalTitle">
+      <div class="rename-modal-header">
+        <h2 id="renameModalTitle">重命名标签</h2>
+        <button id="renameModalClose" class="modal-icon-btn" type="button" aria-label="关闭">×</button>
+      </div>
+      <label id="renameInputLabel" class="rename-label" for="renameInput">标签名称</label>
+      <input id="renameInput" class="rename-input" type="text" autocomplete="off" maxlength="40" />
+      <div id="renameHelper" class="rename-helper">留空则恢复自动名称</div>
+      <div class="rename-actions">
+        <button id="renameResetBtn" type="button">使用自动名称</button>
+        <div class="rename-action-spacer"></div>
+        <button id="renameCancelBtn" type="button">取消</button>
+        <button id="renameSaveBtn" class="modal-primary-btn" type="button">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="Script/myWordCounter.js?v=20260425-rename-modal"></script>
 </body>
 </html>

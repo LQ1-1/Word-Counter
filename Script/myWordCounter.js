@@ -33,6 +33,15 @@
     const titleImageClose = document.getElementById('titleImageClose');
     const pageTabs = document.getElementById('pageTabs');
     const addPageBtn = document.getElementById('addPageBtn');
+    const renameModal = document.getElementById('renameModal');
+    const renameModalTitle = document.getElementById('renameModalTitle');
+    const renameModalClose = document.getElementById('renameModalClose');
+    const renameInputLabel = document.getElementById('renameInputLabel');
+    const renameInput = document.getElementById('renameInput');
+    const renameHelper = document.getElementById('renameHelper');
+    const renameResetBtn = document.getElementById('renameResetBtn');
+    const renameCancelBtn = document.getElementById('renameCancelBtn');
+    const renameSaveBtn = document.getElementById('renameSaveBtn');
 
     const DRAFT_STORAGE_KEY = 'wordCounterPagesV1';
     const LEGACY_DRAFT_STORAGE_KEY = 'wordCounterDraftV1';
@@ -68,6 +77,12 @@
         untitledPage: '文章',
         deletePage: '删除文章',
         confirmDeletePage: '确定删除这篇文章吗？',
+        renamePage: '重命名标签',
+        renameInputLabel: '标签名称',
+        renameHelper: '留空则恢复自动名称',
+        renameReset: '使用自动名称',
+        renameCancel: '取消',
+        renameSave: '保存',
       },
       en: {
         appTitle: 'Word Counter',
@@ -98,6 +113,12 @@
         untitledPage: 'Article',
         deletePage: 'Delete article',
         confirmDeletePage: 'Delete this article?',
+        renamePage: 'Rename tab',
+        renameInputLabel: 'Tab name',
+        renameHelper: 'Leave blank to use the automatic name',
+        renameReset: 'Use automatic name',
+        renameCancel: 'Cancel',
+        renameSave: 'Save',
       },
       de: {
         appTitle: 'Word Counter',
@@ -128,6 +149,12 @@
         untitledPage: 'Text',
         deletePage: 'Text löschen',
         confirmDeletePage: 'Diesen Text löschen?',
+        renamePage: 'Tab umbenennen',
+        renameInputLabel: 'Tab-Name',
+        renameHelper: 'Leer lassen, um den automatischen Namen zu verwenden',
+        renameReset: 'Automatischen Namen verwenden',
+        renameCancel: 'Abbrechen',
+        renameSave: 'Speichern',
       },
       he: {
         appTitle: 'Word Counter',
@@ -158,11 +185,18 @@
         untitledPage: 'מאמר',
         deletePage: 'מחק מאמר',
         confirmDeletePage: 'למחוק את המאמר הזה?',
+        renamePage: 'שנה שם לשונית',
+        renameInputLabel: 'שם הלשונית',
+        renameHelper: 'השאר ריק כדי להשתמש בשם אוטומטי',
+        renameReset: 'השתמש בשם אוטומטי',
+        renameCancel: 'ביטול',
+        renameSave: 'שמור',
       },
     };
 
     let pages = [];
     let activePageId = '';
+    let renamingPageId = '';
 
     function getCurrentLang() {
       const saved = localStorage.getItem(LANG_STORAGE_KEY);
@@ -204,12 +238,19 @@
       underlineBtn.textContent = t.underline;
       contextHint.textContent = t.hint;
       addPageBtn.textContent = t.addPage;
+      renameModalTitle.textContent = t.renamePage;
+      renameInputLabel.textContent = t.renameInputLabel;
+      renameHelper.textContent = t.renameHelper;
+      renameResetBtn.textContent = t.renameReset;
+      renameCancelBtn.textContent = t.renameCancel;
+      renameSaveBtn.textContent = t.renameSave;
       renderPageTabs();
     }
 
     function createPage(data = {}) {
       return {
         id: data.id || `page-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        tabName: typeof data.tabName === 'string' ? data.tabName : '',
         text: typeof data.text === 'string' ? data.text : '',
         titleHtml: typeof data.titleHtml === 'string' ? data.titleHtml : '',
         titleImages: Array.isArray(data.titleImages) ? data.titleImages : [],
@@ -217,6 +258,9 @@
     }
 
     function getPageLabel(page, index) {
+      const customName = (page.tabName || '').trim();
+      if (customName) return customName.length > 16 ? `${customName.slice(0, 16)}...` : customName;
+
       const temp = document.createElement('div');
       temp.innerHTML = page.titleHtml || '';
       const title = (temp.innerText || '').replace(/\s+/g, ' ').trim();
@@ -254,6 +298,7 @@
           activePageId,
           pages: pages.map((page) => ({
             id: page.id,
+            tabName: page.tabName || '',
             text: page.text || '',
             titleHtml: page.titleHtml || '',
             titleImages: sanitizeImages(page.titleImages),
@@ -272,6 +317,7 @@
             pages = payload.pages.map((page) =>
               createPage({
                 id: page.id,
+                tabName: page.tabName,
                 text: page.text,
                 titleHtml: page.titleHtml,
                 titleImages: sanitizeImages(page.titleImages),
@@ -354,6 +400,49 @@
       saveDraft({ skipDomSync: true });
     }
 
+    function renamePage(pageId) {
+      const page = pages.find((item) => item.id === pageId);
+      if (!page) return;
+      renamingPageId = pageId;
+      renameInput.value = page.tabName || '';
+      renameModal.classList.add('open');
+      renameModal.setAttribute('aria-hidden', 'false');
+      setTimeout(() => {
+        renameInput.focus();
+        renameInput.select();
+      }, 0);
+    }
+
+    function closeRenameModal() {
+      renameModal.classList.remove('open');
+      renameModal.setAttribute('aria-hidden', 'true');
+      renamingPageId = '';
+    }
+
+    function saveRenamedPage() {
+      const page = pages.find((item) => item.id === renamingPageId);
+      if (!page) return closeRenameModal();
+      page.tabName = renameInput.value.trim();
+      renderPageTabs();
+      saveDraft({ skipDomSync: true });
+      closeRenameModal();
+    }
+
+    renameSaveBtn.addEventListener('click', saveRenamedPage);
+    renameCancelBtn.addEventListener('click', closeRenameModal);
+    renameModalClose.addEventListener('click', closeRenameModal);
+    renameResetBtn.addEventListener('click', () => {
+      renameInput.value = '';
+      saveRenamedPage();
+    });
+    renameModal.addEventListener('mousedown', (e) => {
+      if (e.target === renameModal) closeRenameModal();
+    });
+    renameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') saveRenamedPage();
+      if (e.key === 'Escape') closeRenameModal();
+    });
+
     function renderPageTabs() {
       if (!pageTabs) return;
       const t = translations[getCurrentLang()] || translations.zh;
@@ -370,7 +459,23 @@
         const label = document.createElement('span');
         label.className = 'page-tab-label';
         label.textContent = getPageLabel(page, index);
+        label.addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          renamePage(page.id);
+        });
         tab.appendChild(label);
+
+        const renameBtn = document.createElement('span');
+        renameBtn.className = 'page-tab-rename';
+        renameBtn.setAttribute('role', 'button');
+        renameBtn.setAttribute('aria-label', t.renamePage);
+        renameBtn.title = t.renamePage;
+        renameBtn.textContent = 'Aa';
+        renameBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          renamePage(page.id);
+        });
+        tab.appendChild(renameBtn);
 
         if (pages.length > 1) {
           const closeBtn = document.createElement('span');
