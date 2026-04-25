@@ -60,6 +60,80 @@
       white-space: nowrap;
     }
 
+    .page-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1rem;
+    }
+
+    .page-tabs {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex: 1;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .page-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 220px;
+      min-width: 92px;
+      height: 36px;
+      padding: 0 10px;
+      border-radius: 8px 8px 0 0;
+      background: #181818;
+      color: var(--secondary-text);
+      border: 1px solid var(--border-color);
+      border-bottom-color: #454545;
+      flex: 0 0 auto;
+    }
+
+    .page-tab.active {
+      background: var(--input-bg);
+      color: var(--text-color);
+      border-color: var(--accent-color);
+      box-shadow: inset 0 -2px 0 var(--accent-color);
+    }
+
+    .page-tab:hover {
+      color: var(--accent-color);
+      border-color: var(--accent-color);
+    }
+
+    .page-tab-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
+    .page-tab-close {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 9px;
+      color: var(--secondary-text);
+      flex: 0 0 auto;
+      line-height: 1;
+    }
+
+    .page-tab-close:hover {
+      background: rgba(255, 82, 82, 0.16);
+      color: var(--danger);
+    }
+
+    .add-page-btn {
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+
     /* 计时器区域 */
     .timer {
       margin-left: auto;
@@ -385,14 +459,15 @@
 
     textarea#textInput {
       width: 100%;
-      height: 250px;
+      min-height: 40rem;
       background-color: var(--input-bg);
       color: var(--text-color);
       border: 1px solid var(--border-color);
       border-radius: 8px;
       padding: 1rem;
       font-size: 1.1rem;
-      resize: vertical;
+      resize: both;
+      overflow: auto;
       box-sizing: border-box;
       outline: none;
       transition: border-color 0.3s ease;

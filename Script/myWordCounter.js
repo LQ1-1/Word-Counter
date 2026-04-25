@@ -31,8 +31,11 @@
     const titleImagePrev = document.getElementById('titleImagePrev');
     const titleImageNext = document.getElementById('titleImageNext');
     const titleImageClose = document.getElementById('titleImageClose');
+    const pageTabs = document.getElementById('pageTabs');
+    const addPageBtn = document.getElementById('addPageBtn');
 
-    const DRAFT_STORAGE_KEY = 'wordCounterDraftV1';
+    const DRAFT_STORAGE_KEY = 'wordCounterPagesV1';
+    const LEGACY_DRAFT_STORAGE_KEY = 'wordCounterDraftV1';
     const LANG_STORAGE_KEY = 'wordCounterLangV1';
 
     const translations = {
@@ -61,6 +64,10 @@
         exportMd: '导出为 .md',
         underline: '下划线',
         hint: '提示：先选中文字，再右键',
+        addPage: '+ 新文章',
+        untitledPage: '文章',
+        deletePage: '删除文章',
+        confirmDeletePage: '确定删除这篇文章吗？',
       },
       en: {
         appTitle: 'Word Counter',
@@ -87,6 +94,10 @@
         exportMd: 'Export .md',
         underline: 'Underline',
         hint: 'Tip: select text first, then right-click',
+        addPage: '+ New Article',
+        untitledPage: 'Article',
+        deletePage: 'Delete article',
+        confirmDeletePage: 'Delete this article?',
       },
       de: {
         appTitle: 'Word Counter',
@@ -113,6 +124,10 @@
         exportMd: 'Als .md exportieren',
         underline: 'Unterstreichen',
         hint: 'Tipp: Text markieren, dann Rechtsklick',
+        addPage: '+ Neuer Text',
+        untitledPage: 'Text',
+        deletePage: 'Text löschen',
+        confirmDeletePage: 'Diesen Text löschen?',
       },
       he: {
         appTitle: 'Word Counter',
@@ -139,8 +154,15 @@
         exportMd: 'ייצא ‎.md',
         underline: 'קו תחתון',
         hint: 'טיפ: סמן טקסט ואז לחץ לחיצה ימנית',
+        addPage: '+ מאמר חדש',
+        untitledPage: 'מאמר',
+        deletePage: 'מחק מאמר',
+        confirmDeletePage: 'למחוק את המאמר הזה?',
       },
     };
+
+    let pages = [];
+    let activePageId = '';
 
     function getCurrentLang() {
       const saved = localStorage.getItem(LANG_STORAGE_KEY);
@@ -181,14 +203,61 @@
       exportMdBtn.textContent = t.exportMd;
       underlineBtn.textContent = t.underline;
       contextHint.textContent = t.hint;
+      addPageBtn.textContent = t.addPage;
+      renderPageTabs();
     }
 
-    function saveDraft() {
+    function createPage(data = {}) {
+      return {
+        id: data.id || `page-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        text: typeof data.text === 'string' ? data.text : '',
+        titleHtml: typeof data.titleHtml === 'string' ? data.titleHtml : '',
+        titleImages: Array.isArray(data.titleImages) ? data.titleImages : [],
+      };
+    }
+
+    function getPageLabel(page, index) {
+      const temp = document.createElement('div');
+      temp.innerHTML = page.titleHtml || '';
+      const title = (temp.innerText || '').replace(/\s+/g, ' ').trim();
+      if (title) return title.length > 16 ? `${title.slice(0, 16)}...` : title;
+
+      const text = (page.text || '').replace(/\s+/g, ' ').trim();
+      if (text) return text.length > 16 ? `${text.slice(0, 16)}...` : text;
+
+      const t = translations[getCurrentLang()] || translations.zh;
+      return `${t.untitledPage} ${index + 1}`;
+    }
+
+    function getActivePage() {
+      return pages.find((page) => page.id === activePageId) || pages[0];
+    }
+
+    function sanitizeImages(images) {
+      return (Array.isArray(images) ? images : []).filter(
+        (item) => item && typeof item.dataUrl === 'string' && item.dataUrl.startsWith('data:image/')
+      );
+    }
+
+    function writeCurrentPageFromDom() {
+      const page = getActivePage();
+      if (!page) return;
+      page.text = textInput.value || '';
+      page.titleHtml = titleInput.innerHTML || '';
+      page.titleImages = sanitizeImages(titleImages);
+    }
+
+    function saveDraft({ skipDomSync = false } = {}) {
       try {
+        if (!skipDomSync) writeCurrentPageFromDom();
         const payload = {
-          text: textInput.value || '',
-          titleHtml: titleInput.innerHTML || '',
-          titleImages: titleImages || [],
+          activePageId,
+          pages: pages.map((page) => ({
+            id: page.id,
+            text: page.text || '',
+            titleHtml: page.titleHtml || '',
+            titleImages: sanitizeImages(page.titleImages),
+          })),
         };
         localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload));
       } catch (_) {}
@@ -197,26 +266,136 @@
     function loadDraft() {
       try {
         const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
-        if (!raw) return;
-        const payload = JSON.parse(raw);
-        if (payload && typeof payload.text === 'string') {
-          textInput.value = payload.text;
+        if (raw) {
+          const payload = JSON.parse(raw);
+          if (payload && Array.isArray(payload.pages) && payload.pages.length > 0) {
+            pages = payload.pages.map((page) =>
+              createPage({
+                id: page.id,
+                text: page.text,
+                titleHtml: page.titleHtml,
+                titleImages: sanitizeImages(page.titleImages),
+              })
+            );
+            activePageId = pages.some((page) => page.id === payload.activePageId)
+              ? payload.activePageId
+              : pages[0].id;
+            loadActivePageIntoDom();
+            return;
+          }
         }
-        if (payload && typeof payload.titleHtml === 'string') {
-          titleInput.innerHTML = payload.titleHtml;
+
+        const legacyRaw = localStorage.getItem(LEGACY_DRAFT_STORAGE_KEY);
+        if (legacyRaw) {
+          const legacy = JSON.parse(legacyRaw);
+          pages = [
+            createPage({
+              text: legacy && typeof legacy.text === 'string' ? legacy.text : '',
+              titleHtml: legacy && typeof legacy.titleHtml === 'string' ? legacy.titleHtml : '',
+              titleImages: legacy ? sanitizeImages(legacy.titleImages) : [],
+            }),
+          ];
+        } else {
+          pages = [createPage()];
         }
-        if (payload && Array.isArray(payload.titleImages)) {
-          titleImages = payload.titleImages.filter(
-            (item) => item && typeof item.dataUrl === 'string' && item.dataUrl.startsWith('data:image/')
-          );
-          renderTitleImages();
-        }
-      } catch (_) {}
+        activePageId = pages[0].id;
+        loadActivePageIntoDom();
+        saveDraft({ skipDomSync: true });
+      } catch (_) {
+        pages = [createPage()];
+        activePageId = pages[0].id;
+        loadActivePageIntoDom();
+      }
     }
+
+    function loadActivePageIntoDom() {
+      const page = getActivePage() || createPage();
+      textInput.value = page.text || '';
+      titleInput.innerHTML = page.titleHtml || '';
+      titleImages = sanitizeImages(page.titleImages);
+      closeTitleImageViewer();
+      renderTitleImages();
+      updateStats();
+      renderPageTabs();
+    }
+
+    function switchPage(pageId) {
+      if (pageId === activePageId) return;
+      writeCurrentPageFromDom();
+      activePageId = pageId;
+      loadActivePageIntoDom();
+      saveDraft({ skipDomSync: true });
+      textInput.focus();
+    }
+
+    function addPage() {
+      writeCurrentPageFromDom();
+      const page = createPage();
+      pages.push(page);
+      activePageId = page.id;
+      loadActivePageIntoDom();
+      saveDraft({ skipDomSync: true });
+      textInput.focus();
+    }
+
+    function deletePage(pageId) {
+      if (pages.length <= 1) return;
+      const t = translations[getCurrentLang()] || translations.zh;
+      if (!window.confirm(t.confirmDeletePage)) return;
+      const index = pages.findIndex((page) => page.id === pageId);
+      if (index === -1) return;
+      pages.splice(index, 1);
+      if (activePageId === pageId) {
+        activePageId = pages[Math.max(0, index - 1)].id;
+        loadActivePageIntoDom();
+      } else {
+        renderPageTabs();
+      }
+      saveDraft({ skipDomSync: true });
+    }
+
+    function renderPageTabs() {
+      if (!pageTabs) return;
+      const t = translations[getCurrentLang()] || translations.zh;
+      pageTabs.innerHTML = '';
+      pages.forEach((page, index) => {
+        const tab = document.createElement('button');
+        tab.type = 'button';
+        tab.className = `page-tab${page.id === activePageId ? ' active' : ''}`;
+        tab.setAttribute('role', 'tab');
+        tab.setAttribute('aria-selected', String(page.id === activePageId));
+        tab.title = getPageLabel(page, index);
+        tab.addEventListener('click', () => switchPage(page.id));
+
+        const label = document.createElement('span');
+        label.className = 'page-tab-label';
+        label.textContent = getPageLabel(page, index);
+        tab.appendChild(label);
+
+        if (pages.length > 1) {
+          const closeBtn = document.createElement('span');
+          closeBtn.className = 'page-tab-close';
+          closeBtn.setAttribute('role', 'button');
+          closeBtn.setAttribute('aria-label', t.deletePage);
+          closeBtn.title = t.deletePage;
+          closeBtn.textContent = '×';
+          closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deletePage(page.id);
+          });
+          tab.appendChild(closeBtn);
+        }
+
+        pageTabs.appendChild(tab);
+      });
+    }
+
+    addPageBtn.addEventListener('click', addPage);
 
     textInput.addEventListener('input', () => {
       updateStats();
       saveDraft();
+      renderPageTabs();
     });
 
     function updateStats() {
@@ -234,14 +413,8 @@
     function clearText() {
       textInput.value = '';
       updateStats();
-      try {
-        const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
-        if (raw) {
-          const payload = JSON.parse(raw);
-          payload.text = '';
-          localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload));
-        }
-      } catch (_) {}
+      saveDraft();
+      renderPageTabs();
       textInput.focus();
     }
 
@@ -317,7 +490,10 @@
 
     renderSidebar();
 
-    titleInput.addEventListener('input', saveDraft);
+    titleInput.addEventListener('input', () => {
+      saveDraft();
+      renderPageTabs();
+    });
 
     // ====== 题目图片上传 ======
     function renderTitleImages() {
