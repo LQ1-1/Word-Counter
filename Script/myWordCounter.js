@@ -2,9 +2,11 @@
     const appTitle = document.getElementById('appTitle');
     const textInput = document.getElementById('textInput');
     const wordCountDisplay = document.getElementById('wordCount');
+    const selectedWordCountDisplay = document.getElementById('selectedWordCount');
     const charCountDisplay = document.getElementById('charCount');
     const charCountNoSpaceDisplay = document.getElementById('charCountNoSpace');
     const wordCountLabel = document.getElementById('wordCountLabel');
+    const selectedWordCountLabel = document.getElementById('selectedWordCountLabel');
     const charCountLabel = document.getElementById('charCountLabel');
     const charCountNoSpaceLabel = document.getElementById('charCountNoSpaceLabel');
     const clearTextBtn = document.getElementById('clearTextBtn');
@@ -67,6 +69,7 @@
         toggleClose: '收回题目栏',
         textPlaceholder: '请在此粘贴或输入文本...',
         wordCount: '单词数 (Words)',
+        selectedWordCount: '选中单词数',
         charCount: '字符数 (Chars)',
         charCountNoSpace: '字符 (不含空格)',
         clearText: '清空文本',
@@ -103,6 +106,7 @@
         toggleClose: 'Close Title Panel',
         textPlaceholder: 'Paste or type text here...',
         wordCount: 'Words',
+        selectedWordCount: 'Selected Words',
         charCount: 'Chars',
         charCountNoSpace: 'Chars (No Spaces)',
         clearText: 'Clear Text',
@@ -139,6 +143,7 @@
         toggleClose: 'Titelbereich schließen',
         textPlaceholder: 'Text hier einfügen oder eingeben...',
         wordCount: 'Wörter',
+        selectedWordCount: 'Markierte Wörter',
         charCount: 'Zeichen',
         charCountNoSpace: 'Zeichen (ohne Leerzeichen)',
         clearText: 'Text löschen',
@@ -175,6 +180,7 @@
         toggleClose: 'סגור לוח כותרת',
         textPlaceholder: 'הדבק או הקלד טקסט כאן...',
         wordCount: 'מילים',
+        selectedWordCount: 'מילים שנבחרו',
         charCount: 'תווים',
         charCountNoSpace: 'תווים (ללא רווחים)',
         clearText: 'נקה טקסט',
@@ -231,6 +237,7 @@
       toggleText.textContent = sidebarOpen ? t.toggleClose : t.toggleOpen;
       textInput.placeholder = t.textPlaceholder;
       wordCountLabel.textContent = t.wordCount;
+      selectedWordCountLabel.textContent = t.selectedWordCount;
       charCountLabel.textContent = t.charCount;
       charCountNoSpaceLabel.textContent = t.charCountNoSpace;
       clearTextBtn.textContent = t.clearText;
@@ -503,6 +510,30 @@
       renderPageTabs();
     });
 
+    textInput.addEventListener('select', updateSelectedWordCount);
+    textInput.addEventListener('keyup', updateSelectedWordCount);
+    textInput.addEventListener('mouseup', updateSelectedWordCount);
+
+    document.addEventListener('selectionchange', () => {
+      if (document.activeElement === textInput) updateSelectedWordCount();
+    });
+
+    function countWords(text) {
+      const trimmedText = String(text || '').trim();
+      return trimmedText ? trimmedText.split(/\s+/).length : 0;
+    }
+
+    function getSelectedText() {
+      const start = textInput.selectionStart;
+      const end = textInput.selectionEnd;
+      if (typeof start !== 'number' || typeof end !== 'number' || start === end) return '';
+      return textInput.value.slice(Math.min(start, end), Math.max(start, end));
+    }
+
+    function updateSelectedWordCount() {
+      selectedWordCountDisplay.textContent = countWords(getSelectedText());
+    }
+
     function updateStats() {
       const text = textInput.value;
 
@@ -511,8 +542,8 @@
       const textWithoutSpaces = text.replace(/\s/g, '');
       charCountNoSpaceDisplay.textContent = textWithoutSpaces.length;
 
-      const trimmedText = text.trim();
-      wordCountDisplay.textContent = trimmedText ? trimmedText.split(/\s+/).length : 0;
+      wordCountDisplay.textContent = countWords(text);
+      updateSelectedWordCount();
     }
 
     function clearText() {
